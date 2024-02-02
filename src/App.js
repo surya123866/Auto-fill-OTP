@@ -1,24 +1,62 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import "./App.css";
 
 function App() {
+  const [otp, setOtp] = useState("0000");
+  const [support, setSupport] = useState("Checking...");
+
+  useEffect(() => {
+    const handleFormSubmit = (e) => {
+      e.preventDefault();
+
+      const input = document.querySelector(
+        'input[autocomplete="one-time-code"]'
+      );
+      if (!input) return;
+
+      const ac = new AbortController();
+      const form = input.closest("form");
+      if (form) {
+        form.addEventListener("submit", () => {
+          ac.abort();
+        });
+      }
+
+      navigator.credentials
+        .get({
+          otp: { transport: ["sms"] },
+          signal: ac.signal,
+        })
+        .then((otp) => {
+          setOtp(otp.code);
+          input.value = otp.code;
+          if (form) form.submit();
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+    };
+
+    if (!("OTPCredential" in window)) {
+      setSupport("Supported");
+    } else {
+      setSupport("Not Supported");
+    }
+
+    window.addEventListener("DOMContentLoaded", handleFormSubmit);
+
+    return () => {
+      window.removeEventListener("DOMContentLoaded", handleFormSubmit);
+    };
+  }, []);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <form className="App">
+      <input autoComplete="one-time-code" required />
+      <input type="submit" />
+      <p>{otp}</p>
+      <p>{support}</p>
+    </form>
   );
 }
 
